@@ -14,7 +14,7 @@ import (
 	"github.com/buroa/qbr/internal/logger"
 )
 
-type reannounceOptions struct {
+type Options struct {
 	maxAge     int
 	maxRetries int
 	interval   int
@@ -34,7 +34,7 @@ func main() {
 	logger.Initialize(*logLevel)
 
 	// Create options struct
-	opts := &reannounceOptions{
+	opts := &Options{
 		maxAge:     *maxAge,
 		maxRetries: *maxRetries,
 		interval:   *interval,
@@ -47,7 +47,7 @@ func main() {
 	}
 }
 
-func runReannounce(ctx context.Context, opts *reannounceOptions) error {
+func runReannounce(ctx context.Context, opts *Options) error {
 	slog.Info("Starting torrent reannouncement process")
 
 	client := qbittorrent.NewClient(qbittorrent.Config{
@@ -60,13 +60,19 @@ func runReannounce(ctx context.Context, opts *reannounceOptions) error {
 		return fmt.Errorf("failed to authenticate with qBittorrent: %w", err)
 	}
 
-	filter := qbittorrent.TorrentFilterOptions{
+	torrentFilterOptions := qbittorrent.TorrentFilterOptions{
 		Filter:          qbittorrent.TorrentFilterStalled,
 		IncludeTrackers: true,
 	}
 
+	reannounceOptions := qbittorrent.ReannounceOptions{
+		Interval:        opts.interval,
+		MaxAttempts:     opts.maxRetries,
+		DeleteOnFailure: false,
+	}
+
 	for {
-		torrents, err := client.GetTorrents(filter)
+		torrents, err := client.GetTorrents(torrentFilterOptions)
 
 		if err != nil {
 			return fmt.Errorf("failed to retrieve torrents: %w", err)
@@ -79,7 +85,7 @@ func runReannounce(ctx context.Context, opts *reannounceOptions) error {
 				wg.Add(1)
 				go func(t qbittorrent.Torrent) {
 					defer wg.Done()
-					if err := reannounceWithRetry(ctx, client, t, opts.maxRetries, opts.interval); err != nil {
+					if err := reannounceWithRetry(ctx, client, t, &reannounceOptions); err != nil {
 						slog.Error("Failed to reannounce torrent", "hash", t.Hash, "error", err)
 					} else {
 						slog.Info("Reannounced torrent", "hash", t.Hash)
@@ -113,14 +119,8 @@ func shouldReannounce(torrent qbittorrent.Torrent, maxAge int) bool {
 }
 
 // reannounceWithRetry performs the reannounce operation with retry logic
-func reannounceWithRetry(ctx context.Context, client *qbittorrent.Client, torrent qbittorrent.Torrent, maxAttempts, interval int) error {
-	opts := qbittorrent.ReannounceOptions{
-		Interval:        interval,
-		MaxAttempts:     maxAttempts,
-		DeleteOnFailure: false,
-	}
-
-	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, &opts); err != nil {
+func reannounceWithRetry(ctx context.Context, client *qbittorrent.Client, torrent qbittorrent.Torrent, opts *qbittorrent.ReannounceOptions) error {
+	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, opts); err != nil {
 		if errors.Is(err, qbittorrent.ErrReannounceTookTooLong) {
 			return fmt.Errorf("reannouncement timeout for torrent %s", torrent.Hash)
 		}
