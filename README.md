@@ -70,10 +70,9 @@ Automatically reannounce torrents that have problematic trackers:
 - `--max-age`: Maximum age of torrents to reannounce in seconds (default: 3600)
 - `--max-retries`: Maximum number of reannounce attempts (default: 18)
 - `--interval`: Interval between reannouncements in seconds (default: 5)
-- `--process-seeding`: Also process seeding torrents
 
 ```bash
-qbr --max-age 7200 --process-seeding
+qbr --max-age 7200
 ```
 
 The reannounce process will:

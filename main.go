@@ -15,19 +15,17 @@ import (
 )
 
 type reannounceOptions struct {
-	maxAge         int
-	maxRetries     int
-	interval       int
-	processSeeding bool
+	maxAge     int
+	maxRetries int
+	interval   int
 }
 
 func main() {
 	var (
-		logLevel       = flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-		maxAge         = flag.Int("max-age", 3600, "Maximum age of a torrent in seconds to reannounce")
-		maxRetries     = flag.Int("max-retries", qbittorrent.ReannounceMaxAttempts, "Maximum number of reannounce retries per torrent")
-		interval       = flag.Int("interval", qbittorrent.ReannounceInterval, "Interval between reannouncement attempts in seconds")
-		processSeeding = flag.Bool("process-seeding", false, "Include seeding torrents in the reannouncement process")
+		logLevel   = flag.String("log-level", "info", "Log level (debug, info, warn, error)")
+		maxAge     = flag.Int("max-age", 3600, "Maximum age of a torrent in seconds to reannounce")
+		maxRetries = flag.Int("max-retries", qbittorrent.ReannounceMaxAttempts, "Maximum number of reannounce retries per torrent")
+		interval   = flag.Int("interval", qbittorrent.ReannounceInterval, "Interval between reannouncement attempts in seconds")
 	)
 
 	flag.Parse()
@@ -37,10 +35,9 @@ func main() {
 
 	// Create options struct
 	opts := &reannounceOptions{
-		maxAge:         *maxAge,
-		maxRetries:     *maxRetries,
-		interval:       *interval,
-		processSeeding: *processSeeding,
+		maxAge:     *maxAge,
+		maxRetries: *maxRetries,
+		interval:   *interval,
 	}
 
 	// Run the reannounce logic
@@ -63,16 +60,14 @@ func runReannounce(ctx context.Context, opts *reannounceOptions) error {
 		return fmt.Errorf("failed to authenticate with qBittorrent: %w", err)
 	}
 
-	for {
-		filter := qbittorrent.TorrentFilterStalledDownloading
-		if opts.processSeeding {
-			filter = qbittorrent.TorrentFilterStalled
-		}
+	filter := qbittorrent.TorrentFilterOptions{
+		Filter:          qbittorrent.TorrentFilterStalled,
+		IncludeTrackers: true,
+	}
 
-		torrents, err := client.GetTorrents(qbittorrent.TorrentFilterOptions{
-			Filter:          filter,
-			IncludeTrackers: true,
-		})
+	for {
+		torrents, err := client.GetTorrents(filter)
+
 		if err != nil {
 			return fmt.Errorf("failed to retrieve torrents: %w", err)
 		}
