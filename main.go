@@ -24,8 +24,8 @@ func main() {
 	var (
 		logLevel   = flag.String("log-level", "info", "Log level (debug, info, warn, error)")
 		maxAge     = flag.Int("max-age", 3600, "Maximum age of a torrent in seconds to reannounce")
-		maxRetries = flag.Int("max-retries", qbittorrent.ReannounceMaxAttempts, "Maximum number of reannounce retries per torrent")
-		interval   = flag.Int("interval", qbittorrent.ReannounceInterval, "Interval between reannouncement attempts in seconds")
+		maxRetries = flag.Int("max-retries", 3, "Maximum number of reannounce retries per torrent")
+		interval   = flag.Int("interval", 5, "Interval between reannouncement attempts in seconds")
 	)
 
 	flag.Parse()
@@ -78,17 +78,19 @@ func runReannounce(ctx context.Context, opts *Options) error {
 			return fmt.Errorf("failed to retrieve torrents: %w", err)
 		}
 
+		var reannounceCount int
 		var wg sync.WaitGroup
 
 		for _, torrent := range torrents {
 			if shouldReannounce(torrent, opts.maxAge) {
+				reannounceCount++
 				wg.Add(1)
 				go func(t qbittorrent.Torrent) {
 					defer wg.Done()
 					if err := reannounceWithRetry(ctx, client, t, &reannounceOptions); err != nil {
-						slog.Error("Failed to reannounce torrent", "hash", t.Hash, "error", err)
+						slog.Error("Failed to reannounce torrent", "name", t.Name, "hash", t.Hash, "error", err)
 					} else {
-						slog.Info("Reannounced torrent", "hash", t.Hash)
+						slog.Info("Reannounced torrent", "name", t.Name, "hash", t.Hash)
 					}
 				}(torrent)
 			}
@@ -96,7 +98,9 @@ func runReannounce(ctx context.Context, opts *Options) error {
 
 		wg.Wait()
 
-		time.Sleep(5 * time.Second)
+		if reannounceCount == 0 {
+			time.Sleep(5 * time.Second)
+		}
 	}
 }
 
