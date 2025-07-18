@@ -68,7 +68,6 @@ qbr --help
 Automatically reannounce torrents that have problematic trackers:
 
 - `--max-age`: Maximum age of torrents to reannounce in seconds (default: 900)
-- `--max-retries`: Maximum number of reannounce attempts (default: 5)
 - `--interval`: Interval between reannouncements in seconds (default: 7)
 
 ```bash
@@ -78,4 +77,4 @@ qbr
 The reannounce process will:
 1. Find torrents with problematic trackers (stalled downloading torrents by default)
 2. Automatically reannounce them with configurable retry logic
-3. Continue running in a loop with a 5-second interval between cycles
+3. Continue running in a loop with a configurable interval between cycles
