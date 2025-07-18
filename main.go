@@ -23,9 +23,9 @@ type Options struct {
 func main() {
 	var (
 		logLevel   = flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-		maxAge     = flag.Int("max-age", 3600, "Maximum age of a torrent in seconds to reannounce")
+		maxAge     = flag.Int("max-age", 900, "Maximum age of a torrent in seconds to reannounce")
 		maxRetries = flag.Int("max-retries", 3, "Maximum number of reannounce retries per torrent")
-		interval   = flag.Int("interval", 5, "Interval between reannouncement attempts in seconds")
+		interval   = flag.Int("interval", qbittorrent.ReannounceInterval, "Interval between reannouncement attempts in seconds")
 	)
 
 	flag.Parse()
@@ -122,7 +122,6 @@ func shouldReannounce(torrent qbittorrent.Torrent, maxAge int) bool {
 	return true
 }
 
-// reannounceWithRetry performs the reannounce operation with retry logic
 func reannounceWithRetry(ctx context.Context, client *qbittorrent.Client, torrent qbittorrent.Torrent, opts *qbittorrent.ReannounceOptions) error {
 	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, opts); err != nil {
 		if errors.Is(err, qbittorrent.ErrReannounceTookTooLong) {
