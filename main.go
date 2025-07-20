@@ -14,14 +14,6 @@ import (
 	"github.com/buroa/qbr/utils"
 )
 
-var (
-	qbittorrentConfig = qbittorrent.Config{
-		Host:     os.Getenv("QBITTORRENT_HOST"),
-		Username: os.Getenv("QBITTORRENT_USERNAME"),
-		Password: os.Getenv("QBITTORRENT_PASSWORD"),
-	}
-)
-
 type Options struct {
 	maxAge      int64
 	maxAttempts int
@@ -59,6 +51,21 @@ func main() {
 }
 
 func runReannounce(ctx context.Context, opts *Options) error {
+	qbittorrentConfig := qbittorrent.Config{
+		Host:     os.Getenv("QBITTORRENT_HOST"),
+		Username: os.Getenv("QBITTORRENT_USERNAME"),
+		Password: os.Getenv("QBITTORRENT_PASSWORD"),
+	}
+
+	// Auto detect host if not set
+	if qbittorrentConfig.Host == "" {
+		qbittorrentHost := "http://localhost"
+		if qbittorrentPort := os.Getenv("QBT_WEBUI_PORT"); qbittorrentPort != "" {
+			qbittorrentHost += ":" + qbittorrentPort
+		}
+		qbittorrentConfig.Host = qbittorrentHost
+	}
+
 	client := qbittorrent.NewClient(qbittorrentConfig)
 	if err := client.Login(); err != nil {
 		return fmt.Errorf("failed to authenticate with qBittorrent: %w", err)
