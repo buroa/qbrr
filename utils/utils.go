@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"flag"
 	"strings"
 
 	"github.com/autobrr/go-qbittorrent"
@@ -9,6 +10,18 @@ import (
 var (
 	words = []string{"unregistered", "not registered", "not found", "not exist"}
 )
+
+func FlagPassed(name string) bool {
+	found := false
+
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+
+	return found
+}
 
 func ShouldReannounce(torrent qbittorrent.Torrent, maxAge int64) bool {
 	if torrent.TimeActive > maxAge {
