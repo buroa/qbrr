@@ -15,11 +15,6 @@ import (
 )
 
 var (
-	torrentFilterOptions = qbittorrent.TorrentFilterOptions{
-		Filter:          qbittorrent.TorrentFilterStalled,
-		IncludeTrackers: true,
-	}
-
 	qbittorrentConfig = qbittorrent.Config{
 		Host:     os.Getenv("QBITTORRENT_HOST"),
 		Username: os.Getenv("QBITTORRENT_USERNAME"),
@@ -56,11 +51,6 @@ func main() {
 		hash:        *hash,
 	}
 
-	// Validate options
-	if opts.hash != "" && !utils.FlagPassed("max-attempts") {
-		opts.maxAttempts = qbittorrent.ReannounceMaxAttempts
-	}
-
 	// Run the reannounce logic
 	if err := runReannounce(context.Background(), opts); err != nil {
 		slog.Error("Failed to execute reannounce", "error", err)
@@ -74,17 +64,26 @@ func runReannounce(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed to authenticate with qBittorrent: %w", err)
 	}
 
+	torrentFilterOptions := qbittorrent.TorrentFilterOptions{
+		Filter:          qbittorrent.TorrentFilterStalled,
+		IncludeTrackers: true,
+	}
+
 	reannounceOptions := qbittorrent.ReannounceOptions{
 		Interval:        opts.interval,
 		MaxAttempts:     opts.maxAttempts,
 		DeleteOnFailure: false,
 	}
 
-	if opts.hash != "" {
+	if opts.hash == "" {
+		slog.Info("Starting torrent reannouncement process")
+	} else {
 		torrentFilterOptions.Filter = qbittorrent.TorrentFilterAll
 		torrentFilterOptions.Hashes = []string{opts.hash}
-	} else {
-		slog.Info("Starting torrent reannouncement process")
+
+		if !utils.FlagPassed("max-attempts") {
+			reannounceOptions.MaxAttempts = qbittorrent.ReannounceMaxAttempts
+		}
 	}
 
 	for {
