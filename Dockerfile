@@ -6,12 +6,7 @@ RUN go mod download
 COPY . .
 
 ENV CGO_ENABLED=0
-RUN go build \
-        -a -installsuffix cgo \
-        -ldflags "-s -w -extldflags '-static'" \
-        -trimpath \
-        -tags netgo \
-        -o qbr .
+RUN go build -ldflags "-s -w" -trimpath -o qbr .
 
 FROM scratch
 COPY --from=builder /app/qbr /qbr
