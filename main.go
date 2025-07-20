@@ -81,6 +81,7 @@ func runReannounce(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.hash != "" {
+		torrentFilterOptions.Filter = qbittorrent.TorrentFilterAll
 		torrentFilterOptions.Hashes = []string{opts.hash}
 	} else {
 		slog.Info("Starting torrent reannouncement process")
