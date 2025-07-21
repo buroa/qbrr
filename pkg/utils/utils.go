@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"flag"
 	"strings"
 
 	"github.com/autobrr/go-qbittorrent"
@@ -10,18 +9,6 @@ import (
 var (
 	words = []string{"unregistered", "not registered", "not found", "not exist"}
 )
-
-func FlagPassed(name string) bool {
-	found := false
-
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			found = true
-		}
-	})
-
-	return found
-}
 
 func ShouldReannounce(torrent qbittorrent.Torrent, maxAge int64) bool {
 	if torrent.TimeActive > maxAge {
@@ -32,17 +19,17 @@ func ShouldReannounce(torrent qbittorrent.Torrent, maxAge int64) bool {
 		return false
 	}
 
-	return !isTrackerStatusOK(torrent.Trackers)
+	return !IsTrackerStatusOK(torrent.Trackers)
 }
 
-func isTrackerStatusOK(trackers []qbittorrent.TorrentTracker) bool {
+func IsTrackerStatusOK(trackers []qbittorrent.TorrentTracker) bool {
 	for _, tracker := range trackers {
 		if tracker.Status == qbittorrent.TrackerStatusDisabled {
 			continue
 		}
 
 		// check for certain messages before the tracker status to catch ok status with unreg msg
-		if isUnregistered(tracker.Message) {
+		if IsUnregistered(tracker.Message) {
 			return false
 		}
 
@@ -54,7 +41,20 @@ func isTrackerStatusOK(trackers []qbittorrent.TorrentTracker) bool {
 	return false
 }
 
-func isUnregistered(msg string) bool {
+func IsTrackerStatusUpdating(trackers []qbittorrent.TorrentTracker) bool {
+	for _, tracker := range trackers {
+		if tracker.Status == qbittorrent.TrackerStatusDisabled {
+			continue
+		}
+
+		return tracker.Status == qbittorrent.TrackerStatusUpdating ||
+			tracker.Status == qbittorrent.TrackerStatusNotContacted
+	}
+
+	return false
+}
+
+func IsUnregistered(msg string) bool {
 	msg = strings.ToLower(msg)
 
 	for _, v := range words {
