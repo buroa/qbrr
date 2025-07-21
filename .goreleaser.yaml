@@ -1,5 +1,6 @@
 ---
 version: 2
+project_name: qbr
 
 before:
   hooks:
@@ -22,3 +23,8 @@ builds:
       - arm64
     main: ./main.go
     binary: qbr
+
+upx:
+  - enabled: true
+    compress: best
+    lzma: true

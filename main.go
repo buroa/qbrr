@@ -6,130 +6,155 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/autobrr/go-qbittorrent"
-	"github.com/buroa/qbr/internal/logger"
-	"github.com/buroa/qbr/utils"
+
+	"github.com/buroa/qbr/pkg/client"
+	"github.com/buroa/qbr/pkg/config"
+	"github.com/buroa/qbr/pkg/logger"
+	"github.com/buroa/qbr/pkg/utils"
 )
 
-type Options struct {
-	maxAge      int64
-	maxAttempts int
-	interval    int
-	hash        string
+func process(ctx context.Context, client client.Client, torrent qbittorrent.Torrent, opts *config.Options) {
+	if torrent.TimeActive > opts.MaxAge {
+		slog.Debug("Torrent too old - skipping", "hash", torrent.Hash, "age", torrent.TimeActive)
+		return
+	}
+
+	if utils.IsTrackerStatusOK(torrent.Trackers) {
+		slog.Debug("Tracker OK - skipping", "hash", torrent.Hash)
+		return
+	}
+
+	tracker, _ := utils.GetTLDPlusOne(torrent.Tracker)
+
+	if utils.IsTrackerStatusUpdating(torrent.Trackers) {
+		slog.Debug("Waiting for tracker update", "hash", torrent.Hash, "tracker", tracker)
+
+		if ok, err := client.WaitForTrackerUpdate(ctx, torrent.Hash); err != nil {
+			slog.Warn("Tracker update failed - proceeding with reannounce", "hash", torrent.Hash, "tracker", tracker, "error", err)
+		} else if ok {
+			slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
+			return
+		}
+	}
+
+	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, &opts.ReannounceOptions); err != nil {
+		slog.Error("Reannounce failed", "hash", torrent.Hash, "tracker", tracker, "error", err)
+	} else {
+		slog.Info("Reannounced", "hash", torrent.Hash, "tracker", tracker)
+	}
+}
+
+func runAnnounce(ctx context.Context, client client.Client, opts *config.Options) error {
+	torrents, err := client.GetTorrentsCtx(ctx, opts.TorrentFilterOptions)
+	if err != nil {
+		return fmt.Errorf("failed to get torrents: %w", err)
+	}
+
+	if len(torrents) == 0 && len(opts.TorrentFilterOptions.Hashes) > 0 {
+		return fmt.Errorf("no torrent found for hash: %s", opts.TorrentFilterOptions.Hashes[0])
+	}
+
+	var wg sync.WaitGroup
+
+	for _, torrent := range torrents {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			process(ctx, client, torrent, opts)
+		}()
+	}
+
+	wg.Wait()
+
+	return nil
+}
+
+func runDaemon(ctx context.Context, client client.Client, opts *config.Options) error {
+	slog.Info("Starting torrent reannouncement daemon")
+
+	ticker := time.NewTicker(time.Duration(opts.ReannounceOptions.Interval) * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("Stopping torrent reannouncement daemon")
+			return nil
+		case <-ticker.C:
+			if err := runAnnounce(ctx, client, opts); err != nil {
+				slog.Error("Error during reannounce cycle", "error", err)
+			}
+		}
+	}
+}
+
+func execute(ctx context.Context, client client.Client, opts *config.Options) error {
+	if len(opts.TorrentFilterOptions.Hashes) > 0 {
+		return runAnnounce(ctx, client, opts)
+	}
+
+	return runDaemon(ctx, client, opts)
+}
+
+func parseFlags() *config.Config {
+	config := &config.Config{}
+
+	flag.StringVar(&config.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
+	flag.Int64Var(&config.MaxAge, "max-age", 300, "Maximum age of a torrent in seconds to reannounce")
+	flag.IntVar(&config.MaxAttempts, "max-attempts", qbittorrent.ReannounceMaxAttempts, "Maximum number of reannounce attempts per torrent")
+	flag.IntVar(&config.Interval, "interval", qbittorrent.ReannounceInterval, "Interval between reannounce checks in seconds (daemon mode)")
+	flag.StringVar(&config.Hash, "hash", "", "Specific torrent hash to reannounce (single run mode)")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nqBittorrent reannouncement tool\n\n")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+	return config
 }
 
 func main() {
-	var (
-		logLevel    = flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-		maxAge      = flag.Int64("max-age", 900, "Maximum age of a torrent in seconds to reannounce")
-		maxAttempts = flag.Int("max-attempts", 3, "Maximum number of reannounce attempts per torrent")
-		interval    = flag.Int("interval", 7, "Interval between reannounce checks in seconds")
-		hash        = flag.String("hash", "", "Specific torrent hash to reannounce")
-	)
-
-	flag.Parse()
+	config := parseFlags()
 
 	// Initialize logger
-	logger.Initialize(*logLevel)
+	logger.Initialize(config.LogLevel)
 
-	// Create options struct
-	opts := &Options{
-		maxAge:      *maxAge,
-		maxAttempts: *maxAttempts,
-		interval:    *interval,
-		hash:        *hash,
-	}
+	// Create a context for the operations
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Run the reannounce logic
-	if err := runReannounce(context.Background(), opts); err != nil {
-		slog.Error("Failed to execute reannounce", "error", err)
+	// Handle OS signals for graceful shutdown
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// Listen for shutdown signals
+	go func() {
+		sig := <-sigs
+		slog.Info("Received signal, shutting down", "signal", sig)
+		cancel()
+	}()
+
+	// Create a new qBittorrent client
+	client, err := client.NewClient()
+	if err != nil {
+		slog.Error("Failed to create qBittorrent client", "error", err)
 		os.Exit(1)
 	}
-}
 
-func runReannounce(ctx context.Context, opts *Options) error {
-	qbittorrentConfig := qbittorrent.Config{
-		Host:     os.Getenv("QBITTORRENT_HOST"),
-		Username: os.Getenv("QBITTORRENT_USERNAME"),
-		Password: os.Getenv("QBITTORRENT_PASSWORD"),
-	}
+	// Create options from the config
+	opts := config.ToOptions()
 
-	// Auto detect host if not set
-	if qbittorrentConfig.Host == "" {
-		qbittorrentHost := "http://localhost"
-		if qbittorrentPort := os.Getenv("QBT_WEBUI_PORT"); qbittorrentPort != "" {
-			qbittorrentHost += ":" + qbittorrentPort
-		}
-		qbittorrentConfig.Host = qbittorrentHost
-	}
-
-	client := qbittorrent.NewClient(qbittorrentConfig)
-	if err := client.Login(); err != nil {
-		return fmt.Errorf("failed to authenticate with qBittorrent: %w", err)
-	}
-
-	torrentFilterOptions := qbittorrent.TorrentFilterOptions{
-		Filter:          qbittorrent.TorrentFilterStalled,
-		IncludeTrackers: true,
-	}
-
-	reannounceOptions := qbittorrent.ReannounceOptions{
-		Interval:        opts.interval,
-		MaxAttempts:     opts.maxAttempts,
-		DeleteOnFailure: false,
-	}
-
-	if opts.hash == "" {
-		slog.Info("Starting torrent reannouncement process")
-	} else {
-		torrentFilterOptions.Filter = qbittorrent.TorrentFilterAll
-		torrentFilterOptions.Hashes = []string{opts.hash}
-
-		if !utils.FlagPassed("max-attempts") {
-			reannounceOptions.MaxAttempts = qbittorrent.ReannounceMaxAttempts
-		}
-	}
-
-	for {
-		torrents, err := client.GetTorrents(torrentFilterOptions)
-		if err != nil {
-			slog.Error("Failed to retrieve torrents", "error", err)
-			continue
-		}
-
-		if opts.hash != "" && len(torrents) == 0 {
-			return fmt.Errorf("no torrents found with hash %s", opts.hash)
-		}
-
-		var reannounceCount int
-		var wg sync.WaitGroup
-
-		for _, torrent := range torrents {
-			if utils.ShouldReannounce(torrent, opts.maxAge) {
-				reannounceCount++
-				wg.Add(1)
-				go func(t qbittorrent.Torrent) {
-					defer wg.Done()
-					if err := client.ReannounceTorrentWithRetry(ctx, t.Hash, &reannounceOptions); err != nil {
-						slog.Error("Failed to reannounce torrent", "name", t.Name, "hash", t.Hash, "error", err)
-					} else {
-						slog.Info("Reannounced torrent", "name", t.Name, "hash", t.Hash)
-					}
-				}(torrent)
-			}
-		}
-
-		wg.Wait()
-
-		if opts.hash != "" {
-			return nil
-		}
-
-		if reannounceCount == 0 {
-			time.Sleep(time.Duration(opts.interval) * time.Second)
-		}
+	// Execute the reannounce or daemon mode based on the provided options
+	if err := execute(ctx, client, opts); err != nil {
+		slog.Error("Failed to execute command", "error", err)
+		os.Exit(1)
 	}
 }

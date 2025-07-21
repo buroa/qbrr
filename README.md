@@ -28,7 +28,7 @@ qbr is a CLI tool for reannouncing torrents in qBittorrent with problematic trac
 Run a container with access to host network:
 
 ```bash
-docker run -it --rm --network host ghcr.io/buroa/qbr:latest --help
+docker run -it --rm --network host ghcr.io/buroa/qbr:main --help
 ```
 
 ### Building
@@ -36,7 +36,7 @@ docker run -it --rm --network host ghcr.io/buroa/qbr:latest --help
 ```bash
 git clone https://github.com/buroa/qbr.git && cd qbr
 docker build -t qbr:latest --pull .
-docker run -it --rm --network host qbr --help
+docker run -it --rm --network host qbr:latest --help
 ```
 
 ## Configuration
@@ -67,7 +67,7 @@ qbr --help
 
 Automatically reannounce torrents that have problematic trackers:
 
-- `--max-age`: Maximum age of torrents to reannounce in seconds (default: 900)
+- `--max-age`: Maximum age of torrents to reannounce in seconds (default: 300)
 - `--max-attempts`: Maximum number of reannounce attempts (default: 3)
 - `--interval`: Interval between reannouncements in seconds (default: 7)
 - `--hash`: Reannounce a specific torrent by its hash
