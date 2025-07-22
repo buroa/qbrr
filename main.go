@@ -37,16 +37,19 @@ func process(ctx context.Context, client client.Client, torrent qbittorrent.Torr
 
 		if ok, err := client.WaitForTrackerUpdate(ctx, torrent.Hash); err != nil {
 			slog.Warn("Tracker update failed - proceeding with reannounce", "hash", torrent.Hash, "tracker", tracker, "error", err)
-		} else if ok {
-			slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
-			return
+		} else {
+			if ok {
+				slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
+				return
+			}
+			slog.Debug("Tracker update not OK - proceeding with reannounce", "hash", torrent.Hash, "tracker", tracker)
 		}
 	}
 
 	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, &opts.ReannounceOptions); err != nil {
 		slog.Error("Reannounce failed", "hash", torrent.Hash, "tracker", tracker, "error", err)
 	} else {
-		slog.Info("Reannounced", "hash", torrent.Hash, "tracker", tracker)
+		slog.Info("Reannounced successfully", "hash", torrent.Hash, "tracker", tracker)
 	}
 }
 
