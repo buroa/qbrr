@@ -1,8 +1,8 @@
-# qbr
+# qbrr
 
 ## Description
 
-qbr is a CLI tool for reannouncing torrents in qBittorrent with problematic trackers, written in Go using the [github.com/autobrr/go-qbittorrent](https://github.com/autobrr/go-qbittorrent) client.
+qbrr is a CLI tool for reannouncing torrents in qBittorrent with problematic trackers, written in Go using the [github.com/autobrr/go-qbittorrent](https://github.com/autobrr/go-qbittorrent) client.
 
 ## Features
 
@@ -28,15 +28,15 @@ qbr is a CLI tool for reannouncing torrents in qBittorrent with problematic trac
 Run a container with access to host network:
 
 ```bash
-docker run -it --rm --network host ghcr.io/buroa/qbr:main --help
+docker run -it --rm --network host ghcr.io/buroa/qbrr:main --help
 ```
 
 ### Building
 
 ```bash
-git clone https://github.com/buroa/qbr.git && cd qbr
-docker build -t qbr:latest --pull .
-docker run -it --rm --network host qbr:latest --help
+git clone https://github.com/buroa/qbrr.git && cd qbrr
+docker build -t qbrr:latest --pull .
+docker run -it --rm --network host qbrr:latest --help
 ```
 
 ## Configuration
@@ -60,7 +60,7 @@ You can specify qBittorrent connection details using environment variables:
 Use the help command to see all available options:
 
 ```bash
-qbr --help
+qbrr --help
 ```
 
 ### Reannounce
@@ -72,7 +72,7 @@ Automatically reannounce torrents that have problematic trackers:
 - `--interval`: Interval between reannouncements in seconds (default: 7)
 - `--hash`: Reannounce a specific torrent by its hash
 ```bash
-qbr
+qbrr
 ```
 
 The reannounce process will:

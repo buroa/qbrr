@@ -1,13 +1,13 @@
 ---
 version: 2
-project_name: qbr
+project_name: qbrr
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: qbr
+  - id: qbrr
     env:
       - CGO_ENABLED=0
     flags:
@@ -22,7 +22,7 @@ builds:
       - amd64
       - arm64
     main: ./main.go
-    binary: qbr
+    binary: qbrr
 
 upx:
   - enabled: true

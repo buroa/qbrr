@@ -1,4 +1,4 @@
-module github.com/buroa/qbr
+module github.com/buroa/qbrr
 
 go 1.24
 
