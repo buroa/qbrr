@@ -25,12 +25,12 @@ func process(ctx context.Context, client client.Client, torrent qbittorrent.Torr
 		return
 	}
 
+	tracker, _ := utils.GetTLDPlusOne(torrent.Tracker)
+
 	if utils.IsTrackerStatusOK(torrent.Trackers) {
-		slog.Debug("Tracker OK - skipping", "hash", torrent.Hash)
+		slog.Debug("Tracker OK - skipping", "hash", torrent.Hash, "tracker", tracker)
 		return
 	}
-
-	tracker, _ := utils.GetTLDPlusOne(torrent.Tracker)
 
 	if utils.IsTrackerStatusUpdating(torrent.Trackers) {
 		slog.Debug("Waiting for tracker update", "hash", torrent.Hash, "tracker", tracker)

@@ -28,7 +28,7 @@ qbrr is a CLI tool for reannouncing torrents in qBittorrent with problematic tra
 Run a container with access to host network:
 
 ```bash
-docker run -it --rm --network host ghcr.io/buroa/qbrr:main --help
+docker run -it --rm --network host ghcr.io/buroa/qbrr:latest --help
 ```
 
 ### Building
