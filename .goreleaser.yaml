@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 project_name: qbrr
 
@@ -21,8 +22,19 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
     main: ./main.go
     binary: qbrr
+
+archives:
+  - id: qbrr
+    ids:
+      - qbrr
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
 
 upx:
   - enabled: true
