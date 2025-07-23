@@ -51,7 +51,7 @@ func NewClient() (Client, error) {
 }
 
 func (c *clientImpl) WaitForTrackerUpdate(ctx context.Context, hash string) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	ticker := time.NewTicker(1 * time.Second)
