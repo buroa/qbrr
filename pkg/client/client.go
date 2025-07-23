@@ -15,7 +15,7 @@ type Client interface {
 	GetTorrentsCtx(ctx context.Context, o qbittorrent.TorrentFilterOptions) ([]qbittorrent.Torrent, error)
 	GetTorrentTrackersCtx(ctx context.Context, hash string) ([]qbittorrent.TorrentTracker, error)
 	ReannounceTorrentWithRetry(ctx context.Context, hash string, o *qbittorrent.ReannounceOptions) error
-	WaitForTrackerUpdate(ctx context.Context, hash string) (bool, error)
+	WaitForTrackerUpdate(ctx context.Context, hash string, timeout time.Duration) (bool, error)
 }
 
 type clientImpl struct {
@@ -50,8 +50,8 @@ func NewClient() (Client, error) {
 	return &clientImpl{Client: client}, nil
 }
 
-func (c *clientImpl) WaitForTrackerUpdate(ctx context.Context, hash string) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+func (c *clientImpl) WaitForTrackerUpdate(ctx context.Context, hash string, timeout time.Duration) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	ticker := time.NewTicker(1 * time.Second)

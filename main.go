@@ -35,14 +35,15 @@ func process(ctx context.Context, client client.Client, torrent qbittorrent.Torr
 	if utils.IsTrackerStatusUpdating(torrent.Trackers) {
 		slog.Debug("Waiting for tracker update", "hash", torrent.Hash, "tracker", tracker)
 
-		if ok, err := client.WaitForTrackerUpdate(ctx, torrent.Hash); err != nil {
-			slog.Warn("Tracker update failed - proceeding with reannounce", "hash", torrent.Hash, "tracker", tracker, "error", err)
+		timeout := time.Duration(opts.ReannounceOptions.Interval) * time.Second
+		if ok, err := client.WaitForTrackerUpdate(ctx, torrent.Hash, timeout); err != nil {
+			slog.Warn("Tracker update failed - proceeding", "hash", torrent.Hash, "tracker", tracker, "error", err)
 		} else {
 			if ok {
 				slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
 				return
 			}
-			slog.Debug("Tracker update not OK - proceeding with reannounce", "hash", torrent.Hash, "tracker", tracker)
+			slog.Debug("Tracker update not OK - proceeding", "hash", torrent.Hash, "tracker", tracker)
 		}
 	}
 
@@ -111,7 +112,7 @@ func parseFlags() *config.Config {
 	flag.StringVar(&config.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	flag.Int64Var(&config.MaxAge, "max-age", 300, "Maximum age of a torrent in seconds to reannounce")
 	flag.IntVar(&config.MaxAttempts, "max-attempts", qbittorrent.ReannounceMaxAttempts, "Maximum number of reannounce attempts per torrent")
-	flag.IntVar(&config.Interval, "interval", qbittorrent.ReannounceInterval, "Interval between reannounce checks in seconds (daemon mode)")
+	flag.IntVar(&config.Interval, "interval", qbittorrent.ReannounceInterval, "Interval between reannounce checks in seconds")
 	flag.StringVar(&config.Hash, "hash", "", "Specific torrent hash to reannounce (single run mode)")
 
 	flag.Usage = func() {
