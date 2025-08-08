@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/autobrr/go-qbittorrent v1.14.0
-	golang.org/x/net v0.42.0
+	golang.org/x/net v0.43.0
 )
 
 require (
