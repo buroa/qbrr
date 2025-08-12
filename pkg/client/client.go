@@ -15,7 +15,7 @@ type Client interface {
 	GetTorrentsCtx(ctx context.Context, o qbittorrent.TorrentFilterOptions) ([]qbittorrent.Torrent, error)
 	GetTorrentTrackersCtx(ctx context.Context, hash string) ([]qbittorrent.TorrentTracker, error)
 	ReannounceTorrentWithRetry(ctx context.Context, hash string, o *qbittorrent.ReannounceOptions) error
-	WaitForTrackerUpdateCtx(ctx context.Context, hash string, timeout time.Duration) (bool, error)
+	WaitForTrackerUpdateCtx(ctx context.Context, hash string) (bool, error)
 }
 
 type clientImpl struct {
@@ -50,10 +50,7 @@ func NewClient() (Client, error) {
 	return &clientImpl{Client: client}, nil
 }
 
-func (c *clientImpl) WaitForTrackerUpdateCtx(ctx context.Context, hash string, timeout time.Duration) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
+func (c *clientImpl) WaitForTrackerUpdateCtx(ctx context.Context, hash string) (bool, error) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -70,7 +67,7 @@ func (c *clientImpl) WaitForTrackerUpdateCtx(ctx context.Context, hash string, t
 				}
 				return false, err
 			} else if len(trackers) == 0 {
-				return false, fmt.Errorf("no trackers found for hash %s", hash)
+				return false, fmt.Errorf("no trackers found for hash: %s", hash)
 			} else if !utils.IsTrackerStatusUpdating(trackers) {
 				return utils.IsTrackerStatusOK(trackers), nil
 			}
