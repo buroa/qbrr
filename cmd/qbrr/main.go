@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -34,23 +35,36 @@ func process(ctx context.Context, client client.Client, torrent qbittorrent.Torr
 
 	if utils.IsTrackerStatusUpdating(torrent.Trackers) {
 		slog.Debug("Waiting for tracker update", "hash", torrent.Hash, "tracker", tracker)
-
 		timeout := time.Duration(opts.ReannounceOptions.Interval) * time.Second
-		if ok, err := client.WaitForTrackerUpdate(ctx, torrent.Hash, timeout); err != nil {
-			slog.Warn("Tracker update failed - proceeding", "hash", torrent.Hash, "tracker", tracker, "error", err)
-		} else {
-			if ok {
-				slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
-				return
+
+		if ok, err := client.WaitForTrackerUpdateCtx(ctx, torrent.Hash, timeout); err != nil {
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				slog.Debug("Tracker update timed out", "hash", torrent.Hash, "tracker", tracker)
+			case errors.Is(err, context.Canceled):
+				slog.Debug("Tracker update canceled", "hash", torrent.Hash, "tracker", tracker)
+				return // Exit if context is canceled
+			default:
+				slog.Error("Error during tracker update", "hash", torrent.Hash, "tracker", tracker, "error", err)
 			}
-			slog.Debug("Tracker update not OK - proceeding", "hash", torrent.Hash, "tracker", tracker)
+		} else if ok {
+			slog.Debug("Tracker update OK - skipping", "hash", torrent.Hash, "tracker", tracker)
+			return
 		}
 	}
 
 	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, &opts.ReannounceOptions); err != nil {
-		slog.Error("Reannounce failed", "hash", torrent.Hash, "tracker", tracker, "error", err)
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
+			slog.Debug("Reannounce timed out", "hash", torrent.Hash, "tracker", tracker)
+		case errors.Is(err, context.Canceled):
+			slog.Debug("Reannounce canceled", "hash", torrent.Hash, "tracker", tracker)
+			return // Exit if context is canceled
+		default:
+			slog.Error("Error during reannounce", "hash", torrent.Hash, "tracker", tracker, "error", err)
+		}
 	} else {
-		slog.Info("Reannounced successfully", "hash", torrent.Hash, "tracker", tracker)
+		slog.Info("Torrent reannounced successfully", "hash", torrent.Hash, "tracker", tracker)
 	}
 }
 
