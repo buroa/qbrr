@@ -25,7 +25,7 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
-    main: ./main.go
+    main: ./cmd/qbrr/main.go
     binary: qbrr
 
 archives:
