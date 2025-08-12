@@ -62,7 +62,7 @@ func (c *clientImpl) WaitForTrackerUpdate(ctx context.Context, hash string, time
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case <-ticker.C:
-			if trackers, err := c.GetTorrentTrackers(hash); err != nil {
+			if trackers, err := c.GetTorrentTrackersCtx(ctx, hash); err != nil {
 				return false, fmt.Errorf("failed to get torrent trackers: %w", err)
 			} else if len(trackers) == 0 {
 				return false, fmt.Errorf("no trackers found for hash: %s", hash)
