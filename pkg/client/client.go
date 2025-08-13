@@ -62,10 +62,12 @@ func (c *clientImpl) WaitForTrackerUpdateCtx(ctx context.Context, hash string) (
 			if trackers, err := c.GetTorrentTrackersCtx(ctx, hash); err != nil {
 				// Check if error is due to context cancellation/timeout first,
 				// as the underlying library may wrap the original context error
-				if ctx.Err() != nil {
+				select {
+				case <-ctx.Done():
 					return false, ctx.Err()
+				default:
+					return false, err
 				}
-				return false, err
 			} else if len(trackers) == 0 {
 				return false, fmt.Errorf("no trackers found for hash: %s", hash)
 			} else if !utils.IsTrackerStatusUpdating(trackers) {

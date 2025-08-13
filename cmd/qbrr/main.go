@@ -21,44 +21,46 @@ import (
 )
 
 func process(ctx context.Context, client client.Client, torrent qbittorrent.Torrent, opts *config.Options) {
-	if torrent.TimeActive > opts.MaxAge {
-		slog.Debug("Torrent too old - skipping", "hash", torrent.Hash, "age", torrent.TimeActive)
+	switch {
+	case torrent.TimeActive > opts.MaxAge:
+		slog.Debug("Skipping torrent: exceeds maximum age threshold",
+			"hash", torrent.Hash,
+			"age_seconds", torrent.TimeActive,
+			"max_age_seconds", opts.MaxAge)
 		return
-	}
 
-	tracker, _ := utils.GetTLDPlusOne(torrent.Tracker)
-
-	if utils.IsTrackerStatusOK(torrent.Trackers) {
-		slog.Debug("Tracker OK - skipping", "hash", torrent.Hash, "tracker", tracker)
+	case utils.IsTrackerStatusOK(torrent.Trackers):
+		slog.Debug("Skipping torrent: tracker status is healthy", "hash", torrent.Hash)
 		return
-	}
 
-	if utils.IsTrackerStatusUpdating(torrent.Trackers) {
-		slog.Debug("Waiting for tracker update", "hash", torrent.Hash, "tracker", tracker)
-
+	case utils.IsTrackerStatusUpdating(torrent.Trackers):
 		timeout := time.Duration(opts.ReannounceOptions.Interval) * time.Second
+		slog.Debug("Waiting for tracker status update to complete", "hash", torrent.Hash, "timeout", timeout)
+
 		updateCtx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		if ok, err := client.WaitForTrackerUpdateCtx(updateCtx, torrent.Hash); err != nil {
 			switch {
 			case errors.Is(err, context.DeadlineExceeded):
-				slog.Debug("Tracker update timed out - reannouncing", "hash", torrent.Hash, "tracker", tracker, "timeout", timeout)
+				slog.Debug("Tracker update timed out, proceeding with reannounce", "hash", torrent.Hash, "timeout", timeout)
 			case errors.Is(err, context.Canceled):
 				return // Exit if the context was canceled
 			default:
-				slog.Warn("Tracker update failed - reannouncing", "hash", torrent.Hash, "tracker", tracker, "error", err)
+				slog.Warn("Tracker update failed, proceeding with reannounce", "hash", torrent.Hash, "error", err)
 			}
 		} else if ok {
-			slog.Debug("Tracker update successful - skipping", "hash", torrent.Hash, "tracker", tracker)
+			slog.Debug("Tracker status became healthy after update, skipping reannounce", "hash", torrent.Hash)
 			return
+		} else {
+			slog.Debug("Tracker status still unhealthy after update, proceeding with reannounce", "hash", torrent.Hash)
 		}
 	}
 
 	if err := client.ReannounceTorrentWithRetry(ctx, torrent.Hash, &opts.ReannounceOptions); err != nil {
-		slog.Warn("Reannounce failed", "hash", torrent.Hash, "tracker", tracker, "error", err)
+		slog.Warn("Reannounce failed", "hash", torrent.Hash, "error", err)
 	} else {
-		slog.Info("Reannounced successfully", "hash", torrent.Hash, "tracker", tracker)
+		slog.Info("Reannounced successfully", "hash", torrent.Hash)
 	}
 }
 
@@ -75,11 +77,9 @@ func runAnnounce(ctx context.Context, client client.Client, opts *config.Options
 	var wg sync.WaitGroup
 
 	for _, torrent := range torrents {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			process(ctx, client, torrent, opts)
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -90,8 +90,14 @@ func runAnnounce(ctx context.Context, client client.Client, opts *config.Options
 func runDaemon(ctx context.Context, client client.Client, opts *config.Options) error {
 	slog.Info("Starting torrent reannouncement daemon")
 
-	ticker := time.NewTicker(time.Duration(opts.ReannounceOptions.Interval) * time.Second)
+	interval := time.Duration(opts.ReannounceOptions.Interval) * time.Second
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	// Run immediately on start, then wait for ticks
+	if err := runAnnounce(ctx, client, opts); err != nil {
+		slog.Error("Error during initial reannounce cycle", "error", err)
+	}
 
 	for {
 		select {

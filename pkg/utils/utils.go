@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"net/url"
 	"strings"
 
 	"github.com/autobrr/go-qbittorrent"
-	"golang.org/x/net/publicsuffix"
 )
 
 var (
@@ -55,18 +53,4 @@ func IsUnregistered(msg string) bool {
 	}
 
 	return false
-}
-
-func GetTLDPlusOne(tracker string) (string, error) {
-	parsedURL, err := url.Parse(tracker)
-	if err != nil {
-		return tracker, err
-	}
-
-	tldPlusOne, err := publicsuffix.EffectiveTLDPlusOne(parsedURL.Hostname())
-	if err != nil {
-		return tracker, err
-	}
-
-	return strings.ToLower(tldPlusOne), nil
 }
