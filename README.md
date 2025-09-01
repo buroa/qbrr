@@ -19,7 +19,8 @@ qbrr is a CLI tool for reannouncing torrents in qBittorrent with problematic tra
 - [Configuration](#configuration)
 - [Usage](#usage)
   - [Help](#help)
-  - [Reannounce](#reannounce)
+  - [Reannounce hash](#reannounce-hash)
+  - [Reannounce daemon](#reannounce-daemon)
 
 ## Installation
 
@@ -63,19 +64,18 @@ Use the help command to see all available options:
 qbrr --help
 ```
 
-### Reannounce
+### Reannounce hash
+
+In qBittorrent, check the "Run on torrent added" option and set it to the following command:
+
+```bash
+qbrr --hash %I
+```
+
+### Reannounce daemon
 
 Automatically reannounce torrents that have problematic trackers:
 
-- `--max-age`: Maximum age of torrents to reannounce in seconds (default: 300)
-- `--max-attempts`: Maximum number of reannounce attempts (default: 3)
-- `--interval`: Interval between reannouncements in seconds (default: 7)
-- `--hash`: Reannounce a specific torrent by its hash
 ```bash
 qbrr
 ```
-
-The reannounce process will:
-1. Find torrents with problematic trackers (stalled downloading torrents by default)
-2. Automatically reannounce them with configurable retry logic
-3. Continue running in a loop with a configurable interval between cycles
