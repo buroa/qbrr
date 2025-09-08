@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/autobrr/go-qbittorrent"
-	"github.com/buroa/qbrr/pkg/utils"
+	"github.com/buroa/qbrr/internal/utils"
 )
 
 type Client interface {

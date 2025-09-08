@@ -14,10 +14,10 @@ import (
 
 	"github.com/autobrr/go-qbittorrent"
 
-	"github.com/buroa/qbrr/pkg/client"
-	"github.com/buroa/qbrr/pkg/config"
-	"github.com/buroa/qbrr/pkg/logger"
-	"github.com/buroa/qbrr/pkg/utils"
+	"github.com/buroa/qbrr/internal/client"
+	"github.com/buroa/qbrr/internal/config"
+	"github.com/buroa/qbrr/internal/logger"
+	"github.com/buroa/qbrr/internal/utils"
 )
 
 func process(ctx context.Context, client client.Client, torrent qbittorrent.Torrent, opts *config.Options) {
