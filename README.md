@@ -54,7 +54,7 @@ You can specify qBittorrent connection details using environment variables:
 
 ### Global Options
 
-- `-l, --log-level`: Log level (debug, info, warn, error)
+- `--log-level`: Log level (debug, info, warn, error)
 
 ## Usage
 
