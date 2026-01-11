@@ -1,8 +1,5 @@
 # qbrr
 
-> [!WARNING]
-> This repository is not maintained anymore. Please consider moving to [qui](https://github.com/autobrr/qui).
-
 ## Description
 
 qbrr is a CLI tool for reannouncing torrents in qBittorrent with problematic trackers, written in Go using the [github.com/autobrr/go-qbittorrent](https://github.com/autobrr/go-qbittorrent) client.
