@@ -1,9 +1,7 @@
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
-github.com/autobrr/autobrr v1.77.1 h1:g/Q4/QRH4+98nMh12NBVjVj3498UbwGDNvX4GR/5ev0=
-github.com/autobrr/autobrr v1.77.1/go.mod h1:Lwnp/1rHEpzu/UTmilba3b5G4b+OdHV54ill0kMlSgE=
-github.com/autobrr/go-qbittorrent v1.15.0 h1:BiwqoXsxcTC5fm6nagJysR2hxUnynAzicrnOfB4Bbnw=
-github.com/autobrr/go-qbittorrent v1.15.0/go.mod h1:W/24JQyQI+u5KntK1qzkBC/7amOTBPpV+q5e3C+kCkY=
+github.com/autobrr/go-qbittorrent v1.16.0 h1:H0zwzLOaCxvJTxJ3xe4+hV3rFSuxucsgKQxsGHydXCU=
+github.com/autobrr/go-qbittorrent v1.16.0/go.mod h1:s36a75VlatWPpHI+pNg4Ta6eB3fRxQvTZPfgMtOsQfY=
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
 github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
