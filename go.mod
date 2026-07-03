@@ -9,6 +9,6 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 )
