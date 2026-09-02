@@ -2,13 +2,13 @@ module github.com/buroa/qbrr
 
 go 1.26
 
-require github.com/autobrr/go-qbittorrent v1.17.0
+require github.com/autobrr/go-qbittorrent v1.18.0
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 )
